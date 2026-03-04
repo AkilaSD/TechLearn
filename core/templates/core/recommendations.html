@@ -1,0 +1,275 @@
+{% extends 'core/base.html' %}
+{% block title %}AI Recommendations - TechLearn Hub{% endblock %}
+{% block extra_css %}
+<style>
+    .page { padding: 2.5rem 0; }
+    .page-header { text-align: center; margin-bottom: 3rem; }
+    .page-header h1 { font-size: 2.5rem; font-weight: 800; font-family: 'Space Grotesk', sans-serif; }
+    .page-header p { color: var(--text-muted); margin-top: 0.5rem; font-size: 1.1rem; }
+    .ai-badge {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        background: rgba(124,58,237,0.12); border: 1px solid rgba(124,58,237,0.25);
+        color: var(--primary-light); padding: 0.3rem 0.8rem; border-radius: 20px;
+        font-size: 0.8rem; font-weight: 600; margin-bottom: 1rem;
+    }
+    .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 3rem; }
+    .goal-card {
+        padding: 1.5rem; border-radius: 16px; cursor: pointer; transition: all 0.2s;
+        text-align: center; border: 2px solid var(--card-border); background: var(--card-bg);
+    }
+    .goal-card:hover { transform: translateY(-4px); border-color: var(--primary); background: rgba(124,58,237,0.08); }
+    .goal-card.selected { border-color: var(--primary); background: rgba(124,58,237,0.15); }
+    .goal-emoji { font-size: 2.5rem; display: block; margin-bottom: 0.7rem; }
+    .goal-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.3rem; }
+    .goal-desc { font-size: 0.75rem; color: var(--text-muted); }
+    .rec-section { display: none; }
+    .rec-section.show { display: block; animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .rec-hero {
+        background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(6,182,212,0.08));
+        border: 1px solid rgba(124,58,237,0.25); border-radius: 24px; padding: 2.5rem; margin-bottom: 2rem;
+    }
+    .rec-hero h2 { font-size: 2rem; font-weight: 800; font-family: 'Space Grotesk', sans-serif; }
+    .rec-hero p { color: var(--text-muted); margin-top: 0.5rem; line-height: 1.7; max-width: 700px; }
+    .rec-content { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    @media (max-width: 768px) { .rec-content { grid-template-columns: 1fr; } }
+    .roadmap-list { list-style: none; position: relative; padding-left: 0; }
+    .roadmap-list::before {
+        content: ''; position: absolute; left: 20px; top: 10px; bottom: 10px;
+        width: 2px; background: linear-gradient(to bottom, var(--primary), var(--secondary));
+    }
+    .roadmap-item { display: flex; gap: 1rem; margin-bottom: 1.5rem; position: relative; }
+    .roadmap-step {
+        width: 40px; height: 40px; border-radius: 50%; display: flex;
+        align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white; flex-shrink: 0; z-index: 1;
+    }
+    .roadmap-content { flex: 1; padding-top: 0.5rem; }
+    .r-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.2rem; }
+    .r-desc { font-size: 0.8rem; color: var(--text-muted); }
+    .r-duration {
+        display: inline-block; margin-top: 0.4rem; font-size: 0.75rem;
+        padding: 0.2rem 0.6rem; border-radius: 20px;
+        background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.2); color: var(--secondary);
+    }
+    .langs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.8rem; }
+    .lang-rec-card {
+        display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+        padding: 1rem; border-radius: 14px; border: 1px solid var(--card-border);
+        background: var(--card-bg); color: var(--text); transition: all 0.2s; text-align: center;
+    }
+    .lang-rec-card:hover { transform: translateY(-4px); border-color: var(--primary); }
+    .lr-icon { font-size: 2rem; }
+    .lr-name { font-weight: 700; font-size: 0.85rem; }
+    .lr-links { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
+    .lr-mini-btn {
+        padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600;
+        background: rgba(255,255,255,0.07); border: 1px solid var(--card-border);
+        color: var(--text-muted); text-decoration: none;
+    }
+    .lr-mini-btn:hover { background: rgba(124,58,237,0.15); color: var(--primary-light); }
+    .section-title-sm { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.2rem; }
+    .loading-indicator { text-align: center; padding: 2rem; display: none; color: var(--text-muted); }
+    .loading-indicator.show { display: block; }
+    .spinner {
+        width: 32px; height: 32px; border: 3px solid var(--card-border);
+        border-top-color: var(--primary); border-radius: 50%;
+        animation: spin 0.8s linear infinite; margin: 0 auto 0.7rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); }
+    .es-icon { font-size: 4rem; display: block; margin-bottom: 1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container page">
+    <div class="page-header">
+        <div class="ai-badge">🤖 AI Recommendation Engine</div>
+        <h1>What do you want to become?</h1>
+        <p>Select your career goal and get a personalized learning roadmap.</p>
+    </div>
+
+    <div class="goals-grid" id="goalsGrid">
+        {% for g in goals %}
+        <div class="goal-card {% if user_goal and user_goal.goal == g.key %}selected{% endif %}"
+             onclick="selectGoal('{{ g.key }}', this)">
+            <span class="goal-emoji">{{ g.emoji }}</span>
+            <div class="goal-title">{{ g.title }}</div>
+            <div class="goal-desc">{{ g.desc }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="loading-indicator" id="loading">
+        <div class="spinner"></div>
+        <p>Generating your personalized roadmap...</p>
+    </div>
+
+    <div class="rec-section {% if rec_data %}show{% endif %}" id="recSection">
+        {% if rec_data %}
+        <div class="rec-hero">
+            <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.5rem;">
+                <span style="font-size:2.5rem;">{{ rec_data.emoji }}</span>
+                <h2>{{ rec_data.title }} Path</h2>
+            </div>
+            <p>{{ rec_data.description }}</p>
+        </div>
+        <div class="rec-content">
+            <div class="card" style="padding:1.5rem;">
+                <div class="section-title-sm">🗺️ Your Learning Roadmap</div>
+                <ul class="roadmap-list">
+                    {% for step in rec_data.roadmap %}
+                    <li class="roadmap-item">
+                        <div class="roadmap-step">{{ step.step }}</div>
+                        <div class="roadmap-content">
+                            <div class="r-title">{{ step.icon }} {{ step.title }}</div>
+                            <div class="r-desc">{{ step.desc }}</div>
+                            <span class="r-duration">⏱️ {{ step.duration }}</span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div>
+                <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
+                    <div class="section-title-sm">📚 Recommended Languages</div>
+                    <div class="langs-grid">
+                        {% for lang_key in rec_data.languages %}
+                        <div class="lang-rec-card">
+                            <span class="lr-icon">
+                                {% if lang_key == 'python' %}🐍{% elif lang_key == 'django' %}🌿{% elif lang_key == 'java' %}☕{% elif lang_key == 'springboot' %}🍃{% elif lang_key == 'html' %}🌐{% elif lang_key == 'css' %}🎨{% elif lang_key == 'javascript' %}⚡{% elif lang_key == 'react' %}⚛️{% elif lang_key == 'nodejs' %}🟢{% elif lang_key == 'sql' %}🗄️{% else %}💻{% endif %}
+                            </span>
+                            <span class="lr-name">{{ lang_key|title }}</span>
+                            <div class="lr-links">
+                                <a href="/tutorials/{{ lang_key }}/" class="lr-mini-btn">📚</a>
+                                <a href="/quiz/{{ lang_key }}/" class="lr-mini-btn">🧠</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card" style="padding:1.5rem;background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(6,182,212,0.05));border-color:rgba(124,58,237,0.2);">
+                    <div class="section-title-sm">💡 Pro Tips</div>
+                    <p style="color:var(--text-muted);font-size:0.85rem;line-height:2;">
+                        ✅ Follow the roadmap steps in order<br>
+                        ✅ Practice daily — even 30 minutes counts<br>
+                        ✅ Build real projects to solidify your learning<br>
+                        ✅ Take quizzes regularly to track progress<br>
+                        ✅ Join communities on GitHub and Stack Overflow
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div id="emptyState" class="empty-state" {% if rec_data %}style="display:none"{% endif %}>
+        <span class="es-icon">🎯</span>
+        <h3>Select a career goal above</h3>
+        <p>We'll generate a personalized learning roadmap just for you!</p>
+    </div>
+</div>
+
+<script>
+const ICON_MAP = {
+    python:'🐍', django:'🌿', java:'☕', springboot:'🍃',
+    html:'🌐', css:'🎨', javascript:'⚡', react:'⚛️', nodejs:'🟢', sql:'🗄️'
+};
+
+async function selectGoal(goalKey, cardEl) {
+    document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('selected'));
+    cardEl.classList.add('selected');
+    document.getElementById('loading').classList.add('show');
+    document.getElementById('recSection').classList.remove('show');
+    document.getElementById('emptyState').style.display = 'none';
+
+    try {
+        const res = await fetch('/recommendations/set-goal/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ goal: goalKey })
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+            renderRec(data.rec);
+        } else {
+            document.getElementById('emptyState').style.display = 'block';
+        }
+    } catch (e) {
+        console.error('Error fetching recommendation:', e);
+        document.getElementById('emptyState').style.display = 'block';
+    }
+    document.getElementById('loading').classList.remove('show');
+}
+
+function renderRec(rec) {
+    const roadmapHtml = rec.roadmap.map(s => `
+        <li class="roadmap-item">
+            <div class="roadmap-step">${s.step}</div>
+            <div class="roadmap-content">
+                <div class="r-title">${s.icon || ''} ${s.title}</div>
+                <div class="r-desc">${s.desc}</div>
+                <span class="r-duration">⏱️ ${s.duration}</span>
+            </div>
+        </li>`).join('');
+
+    const langsHtml = rec.languages.map(k => `
+        <div class="lang-rec-card">
+            <span class="lr-icon">${ICON_MAP[k] || '💻'}</span>
+            <span class="lr-name">${k.charAt(0).toUpperCase() + k.slice(1)}</span>
+            <div class="lr-links">
+                <a href="/tutorials/${k}/" class="lr-mini-btn">📚</a>
+                <a href="/quiz/${k}/" class="lr-mini-btn">🧠</a>
+            </div>
+        </div>`).join('');
+
+    document.getElementById('recSection').innerHTML = `
+        <div class="rec-hero">
+            <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.5rem;">
+                <span style="font-size:2.5rem;">${rec.emoji || '🎯'}</span>
+                <h2>${rec.title} Path</h2>
+            </div>
+            <p>${rec.description}</p>
+        </div>
+        <div class="rec-content">
+            <div class="card" style="padding:1.5rem;">
+                <div class="section-title-sm">🗺️ Your Learning Roadmap</div>
+                <ul class="roadmap-list">${roadmapHtml}</ul>
+            </div>
+            <div>
+                <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
+                    <div class="section-title-sm">📚 Recommended Languages</div>
+                    <div class="langs-grid">${langsHtml}</div>
+                </div>
+                <div class="card" style="padding:1.5rem;background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(6,182,212,0.05));border-color:rgba(124,58,237,0.2);">
+                    <div class="section-title-sm">💡 Pro Tips</div>
+                    <p style="color:var(--text-muted);font-size:0.85rem;line-height:2;">
+                        ✅ Follow the roadmap steps in order<br>
+                        ✅ Practice daily — even 30 minutes counts<br>
+                        ✅ Build real projects to solidify your learning<br>
+                        ✅ Take quizzes regularly to track progress<br>
+                        ✅ Join communities on GitHub and Stack Overflow
+                    </p>
+                </div>
+            </div>
+        </div>`;
+    document.getElementById('recSection').classList.add('show');
+}
+
+function getCookie(name) {
+    let v = null;
+    if (document.cookie) {
+        document.cookie.split(';').forEach(c => {
+            const t = c.trim();
+            if (t.startsWith(name + '=')) v = decodeURIComponent(t.slice(name.length + 1));
+        });
+    }
+    return v;
+}
+</script>
+{% endblock %}

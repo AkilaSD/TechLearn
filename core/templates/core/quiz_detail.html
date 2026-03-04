@@ -1,0 +1,435 @@
+{% extends 'core/base.html' %}
+{% block title %}{{ language_name }} Quiz - TechLearn Hub{% endblock %}
+{% block extra_css %}
+<style>
+    .page { padding: 2.5rem 0; }
+    .quiz-header {
+        text-align: center; padding: 2.5rem 2rem;
+        background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(6,182,212,0.08));
+        border-radius: 20px; border: 1px solid rgba(124,58,237,0.2); margin-bottom: 2rem;
+    }
+    .quiz-header .q-icon { font-size: 4rem; display: block; margin-bottom: 0.8rem; }
+    .quiz-header h1 { font-size: 2rem; font-weight: 800; font-family: 'Space Grotesk', sans-serif; }
+    .quiz-header p { color: var(--text-muted); margin-top: 0.3rem; }
+    .progress-bar-wrap {
+        background: rgba(255,255,255,0.06); border-radius: 50px;
+        height: 8px; margin: 1.5rem 0 0.5rem; overflow: hidden;
+    }
+    .progress-bar-fill {
+        height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary));
+        border-radius: 50px; transition: width 0.4s ease;
+    }
+    .progress-label { text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+    .question-card {
+        padding: 2rem; border-radius: 20px; margin-bottom: 1.5rem;
+        animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .q-num {
+        font-size: 0.75rem; color: var(--text-muted); font-weight: 600;
+        margin-bottom: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .q-text { font-size: 1.1rem; font-weight: 600; line-height: 1.6; margin-bottom: 1.5rem; }
+    .options-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .option-btn {
+        padding: 1rem 1.2rem; border-radius: 14px;
+        border: 2px solid var(--card-border); background: rgba(255,255,255,0.04);
+        color: var(--text); cursor: pointer; text-align: left; font-size: 0.95rem;
+        font-family: inherit; transition: all 0.2s;
+        display: flex; align-items: center; gap: 0.8rem; width: 100%;
+    }
+    .option-btn:hover:not([disabled]) {
+        border-color: var(--primary); background: rgba(124,58,237,0.1);
+        transform: translateX(4px);
+    }
+    .option-label {
+        min-width: 32px; height: 32px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 0.85rem;
+        background: rgba(255,255,255,0.1); flex-shrink: 0;
+    }
+    .option-text { flex: 1; line-height: 1.4; }
+    /* Result states */
+    .option-btn.correct {
+        border-color: #10b981 !important; background: rgba(16,185,129,0.15) !important;
+    }
+    .option-btn.correct .option-label { background: #10b981; color: white; }
+    .option-btn.wrong {
+        border-color: #ef4444 !important; background: rgba(239,68,68,0.12) !important;
+    }
+    .option-btn.wrong .option-label { background: #ef4444; color: white; }
+    .option-btn.selected-pending {
+        border-color: var(--primary); background: rgba(124,58,237,0.12);
+    }
+    .option-btn.selected-pending .option-label { background: var(--primary); color: white; }
+    .feedback {
+        margin-top: 1rem; padding: 0.9rem 1.2rem; border-radius: 12px;
+        font-size: 0.875rem; display: none; line-height: 1.5;
+    }
+    .feedback.show { display: flex; align-items: flex-start; gap: 0.6rem; }
+    .feedback.correct-fb { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); color: #6ee7b7; }
+    .feedback.wrong-fb { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
+    .quiz-nav {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;
+    }
+    .answered-bar {
+        display: flex; gap: 0.3rem; flex-wrap: wrap; justify-content: center;
+        margin: 1rem 0;
+    }
+    .ans-dot {
+        width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--card-border);
+        background: rgba(255,255,255,0.05); cursor: pointer; font-size: 0.7rem;
+        display: flex; align-items: center; justify-content: center; font-weight: 700;
+        transition: all 0.2s; color: var(--text-muted);
+    }
+    .ans-dot.answered { background: rgba(124,58,237,0.25); border-color: var(--primary); color: var(--primary-light); }
+    .ans-dot.current { border-color: var(--secondary); background: rgba(6,182,212,0.2); color: var(--secondary); }
+    /* Results panel */
+    .results-panel { display: none; text-align: center; padding: 3rem 2rem; }
+    .results-panel.show { display: block; animation: slideIn 0.4s ease; }
+    .score-circle {
+        width: 150px; height: 150px; border-radius: 50%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        margin: 0 auto 1.5rem; border: 4px solid var(--primary);
+        background: rgba(124,58,237,0.1);
+    }
+    .score-num { font-size: 2.8rem; font-weight: 800; font-family: 'Space Grotesk', sans-serif; }
+    .score-label { font-size: 0.75rem; color: var(--text-muted); }
+    .results-stats { display: flex; justify-content: center; gap: 2.5rem; margin: 1.5rem 0; flex-wrap: wrap; }
+    .r-stat { text-align: center; }
+    .r-val { font-size: 2rem; font-weight: 700; font-family: 'Space Grotesk', sans-serif; }
+    .r-lbl { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .no-questions { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+    .nq-icon { font-size: 4rem; display: block; margin-bottom: 1rem; }
+    .submit-all-btn {
+        padding: 0.8rem 2rem; background: linear-gradient(135deg, var(--success, #10b981), #059669);
+        color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: 700;
+        cursor: pointer; font-family: inherit; transition: all 0.2s;
+        box-shadow: 0 4px 15px rgba(16,185,129,0.3);
+    }
+    .submit-all-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+    .submit-all-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container page">
+    <a href="{% url 'quiz_list' %}" style="color:var(--text-muted);text-decoration:none;font-size:0.9rem;display:inline-block;margin-bottom:1rem;">← All Quizzes</a>
+
+    <div class="quiz-header">
+        <span class="q-icon">{{ language_icon }}</span>
+        <h1>{{ language_name }} Quiz</h1>
+        <p>{{ question_count }} questions to test your knowledge</p>
+    </div>
+
+    {% if question_count > 0 %}
+    <div id="quizContainer">
+        <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
+        </div>
+        <div class="progress-label" id="progressLabel">Question 1 of {{ question_count }}</div>
+
+        <!-- Question dots navigation -->
+        <div class="answered-bar" id="answeredBar"></div>
+
+        <div id="questionsArea"></div>
+
+        <div class="quiz-nav" id="quizNav">
+            <button class="btn btn-secondary" id="prevBtn" onclick="prevQuestion()" disabled>← Prev</button>
+            <button class="submit-all-btn" id="submitBtn" onclick="submitQuiz()" disabled>
+                🏁 Submit Quiz (<span id="answeredCount">0</span>/{{ question_count }})
+            </button>
+            <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()">Next →</button>
+        </div>
+    </div>
+
+    <div class="card results-panel" id="resultsPanel">
+        <div class="score-circle" id="scoreCircle">
+            <span class="score-num" id="scoreNum">0%</span>
+            <span class="score-label">Score</span>
+        </div>
+        <h2 id="resultTitle" style="font-size:1.8rem;font-weight:800;margin-bottom:0.5rem;font-family:'Space Grotesk',sans-serif;"></h2>
+        <p id="resultMsg" style="color:var(--text-muted);margin-bottom:1rem;"></p>
+        <div class="results-stats" id="resultsStats"></div>
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem;">
+            <button class="btn btn-primary" onclick="restartQuiz()">🔄 Retake Quiz</button>
+            <a href="{% url 'quiz_list' %}" class="btn btn-secondary">← All Quizzes</a>
+            <a href="{% url 'tutorial_detail' language %}" class="btn btn-secondary">📚 Study More</a>
+        </div>
+
+        <!-- Review answers section -->
+        <div style="margin-top:2.5rem;text-align:left;" id="reviewSection"></div>
+    </div>
+
+    {% else %}
+    <div class="card no-questions">
+        <span class="nq-icon">🛠️</span>
+        <h3 style="font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;">No questions yet!</h3>
+        <p>Quiz questions for {{ language_name }} are coming soon.</p>
+        <a href="{% url 'tutorial_detail' language %}" class="btn btn-primary" style="margin-top:1.5rem;">📚 Study {{ language_name }}</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Parse questions - already JSON-safe (no datetime fields)
+const questions = {{ questions_json|safe }};
+const language = "{{ language }}";
+const CSRF = "{{ csrf_token }}";
+
+let currentQ = 0;
+let answers = {};      // { qid: 'A'|'B'|'C'|'D' }
+let submitted = false;
+let serverResults = {}; // { qid: {correct, correct_answer, explanation} }
+
+// ─── Init ───
+if (questions.length > 0) {
+    buildDots();
+    renderQuestion(0);
+}
+
+function buildDots() {
+    const bar = document.getElementById('answeredBar');
+    bar.innerHTML = questions.map((q, i) =>
+        `<div class="ans-dot ${i===0?'current':''}" id="dot_${q.id}" onclick="jumpTo(${i})" title="Q${i+1}">${i+1}</div>`
+    ).join('');
+}
+
+function jumpTo(idx) {
+    currentQ = idx;
+    renderQuestion(idx);
+}
+
+// ─── Render one question ───
+function renderQuestion(idx) {
+    if (idx < 0 || idx >= questions.length) return;
+    const q = questions[idx];
+    const opts = [
+        { key: 'A', text: q.option_a },
+        { key: 'B', text: q.option_b },
+        { key: 'C', text: q.option_c },
+        { key: 'D', text: q.option_d },
+    ];
+
+    const selectedKey = answers[q.id];
+    const result = serverResults[q.id];  // only set after submit
+
+    let optHtml = opts.map(opt => {
+        let cls = '';
+        if (submitted && result) {
+            if (opt.key === result.correct_answer) cls = 'correct';
+            else if (opt.key === selectedKey) cls = 'wrong';
+        } else if (opt.key === selectedKey) {
+            cls = 'selected-pending';
+        }
+        const dis = (selectedKey && !submitted) || submitted ? 'disabled' : '';
+        return `<button class="option-btn ${cls}" ${dis}
+                    onclick="selectOption(${q.id}, '${opt.key}', this)">
+                    <span class="option-label">${opt.key}</span>
+                    <span class="option-text">${escapeHtml(opt.text)}</span>
+                </button>`;
+    }).join('');
+
+    let feedbackHtml = '';
+    if (submitted && result) {
+        const ok = result.correct;
+        feedbackHtml = `<div class="feedback ${ok?'correct-fb':'wrong-fb'} show">
+            <span>${ok?'✅':'❌'}</span>
+            <span>${ok ? 'Correct! ' : 'Wrong. Correct answer: <strong>'+result.correct_answer+'</strong>. '}${escapeHtml(result.explanation || '')}</span>
+        </div>`;
+    }
+
+    document.getElementById('questionsArea').innerHTML = `
+        <div class="card question-card">
+            <div class="q-num">Question ${idx + 1} of ${questions.length}</div>
+            <div class="q-text">${escapeHtml(q.question)}</div>
+            <div class="options-list">${optHtml}</div>
+            ${feedbackHtml}
+        </div>`;
+
+    updateProgress(idx);
+    updateNav(idx);
+    updateDots(idx);
+}
+
+// ─── Select option ───
+function selectOption(qid, key, btnEl) {
+    if (answers[qid] || submitted) return;
+    answers[qid] = key;
+
+    // Highlight selected button immediately
+    btnEl.closest('.options-list').querySelectorAll('.option-btn').forEach(b => {
+        b.disabled = true;
+        b.classList.remove('selected-pending');
+    });
+    btnEl.classList.add('selected-pending');
+    btnEl.querySelector('.option-label').style.background = 'var(--primary)';
+    btnEl.querySelector('.option-label').style.color = 'white';
+
+    updateAnsweredCount();
+    updateDots(currentQ);
+
+    // Auto-advance after short delay if not last question
+    if (currentQ < questions.length - 1) {
+        setTimeout(() => { currentQ++; renderQuestion(currentQ); }, 700);
+    }
+}
+
+// ─── Navigation ───
+function prevQuestion() {
+    if (currentQ > 0) { currentQ--; renderQuestion(currentQ); }
+}
+function nextQuestion() {
+    if (currentQ < questions.length - 1) { currentQ++; renderQuestion(currentQ); }
+}
+
+// ─── Update helpers ───
+function updateProgress(idx) {
+    const pct = Math.round(((idx + 1) / questions.length) * 100);
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `Question ${idx + 1} of ${questions.length}`;
+}
+
+function updateNav(idx) {
+    document.getElementById('prevBtn').disabled = idx === 0;
+    document.getElementById('nextBtn').disabled = idx === questions.length - 1;
+}
+
+function updateAnsweredCount() {
+    const count = Object.keys(answers).length;
+    document.getElementById('answeredCount').textContent = count;
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = count < questions.length;
+    if (count === questions.length) {
+        submitBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        submitBtn.textContent = `🏁 Submit Quiz (${count}/${questions.length}) ✨`;
+    }
+}
+
+function updateDots(idx) {
+    questions.forEach((q, i) => {
+        const dot = document.getElementById('dot_' + q.id);
+        if (!dot) return;
+        dot.classList.remove('current', 'answered');
+        if (i === idx) dot.classList.add('current');
+        else if (answers[q.id]) dot.classList.add('answered');
+    });
+}
+
+// ─── Submit quiz ───
+async function submitQuiz() {
+    const count = Object.keys(answers).length;
+    if (count < questions.length) {
+        if (!confirm(`You've answered ${count} of ${questions.length} questions. Submit anyway?`)) return;
+    }
+    submitted = true;
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').textContent = '⏳ Submitting...';
+
+    try {
+        const res = await fetch('/quiz/submit/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF
+            },
+            body: JSON.stringify({ language, answers })
+        });
+        const data = await res.json();
+
+        // Store results keyed by question id
+        data.results.forEach(r => { serverResults[r.id] = r; });
+
+        showResults(data);
+    } catch (err) {
+        console.error('Submit error:', err);
+        alert('Error submitting quiz. Please try again.');
+        submitted = false;
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').textContent = `🏁 Submit Quiz`;
+    }
+}
+
+// ─── Show results ───
+function showResults(data) {
+    document.getElementById('quizContainer').style.display = 'none';
+    const panel = document.getElementById('resultsPanel');
+    panel.classList.add('show');
+
+    const pct = Math.round((data.score / data.total) * 100);
+    document.getElementById('scoreNum').textContent = pct + '%';
+
+    const circle = document.getElementById('scoreCircle');
+    let titleText, msgText, circleColor;
+    if (pct >= 80) {
+        circleColor = '#10b981';
+        titleText = '🏆 Excellent!';
+        msgText = 'Outstanding performance! You really know your stuff.';
+    } else if (pct >= 60) {
+        circleColor = '#f59e0b';
+        titleText = '👍 Good Job!';
+        msgText = 'Solid understanding! Keep practicing to reach mastery.';
+    } else if (pct >= 40) {
+        circleColor = '#f97316';
+        titleText = '📚 Keep Practicing';
+        msgText = 'Review the tutorial material and try again!';
+    } else {
+        circleColor = '#ef4444';
+        titleText = '💪 Keep Going!';
+        msgText = 'Study more and don\'t give up — you\'ll get there!';
+    }
+    circle.style.borderColor = circleColor;
+    circle.style.background = circleColor + '1a';
+    document.getElementById('resultTitle').textContent = titleText;
+    document.getElementById('resultMsg').textContent = msgText;
+    document.getElementById('resultsStats').innerHTML = `
+        <div class="r-stat"><div class="r-val" style="color:#10b981">${data.score}</div><div class="r-lbl">Correct</div></div>
+        <div class="r-stat"><div class="r-val" style="color:#ef4444">${data.total - data.score}</div><div class="r-lbl">Wrong</div></div>
+        <div class="r-stat"><div class="r-val" style="color:var(--primary-light)">${data.total}</div><div class="r-lbl">Total</div></div>
+    `;
+
+    // Build review section
+    let reviewHtml = '<h3 style="font-size:1.2rem;font-weight:700;margin-bottom:1.2rem;">📋 Answer Review</h3>';
+    questions.forEach((q, i) => {
+        const r = serverResults[q.id];
+        if (!r) return;
+        const ok = r.correct;
+        reviewHtml += `
+            <div style="padding:1rem;border-radius:12px;margin-bottom:0.8rem;
+                border:1px solid ${ok?'rgba(16,185,129,0.3)':'rgba(239,68,68,0.3)'};
+                background:${ok?'rgba(16,185,129,0.06)':'rgba(239,68,68,0.06)'};">
+                <div style="font-weight:600;margin-bottom:0.5rem;">${i+1}. ${escapeHtml(q.question)}</div>
+                <div style="font-size:0.85rem;color:${ok?'#6ee7b7':'#fca5a5'};">
+                    ${ok?'✅ Correct':'❌ Your answer: '+answers[q.id]+' | Correct: '+r.correct_answer}
+                </div>
+                ${r.explanation ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.3rem;">${escapeHtml(r.explanation)}</div>` : ''}
+            </div>`;
+    });
+    document.getElementById('reviewSection').innerHTML = reviewHtml;
+}
+
+// ─── Restart ───
+function restartQuiz() {
+    answers = {}; serverResults = {}; currentQ = 0; submitted = false;
+    document.getElementById('quizContainer').style.display = 'block';
+    document.getElementById('resultsPanel').classList.remove('show');
+    document.getElementById('answeredCount').textContent = '0';
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = `🏁 Submit Quiz (0/${questions.length})`;
+    buildDots();
+    renderQuestion(0);
+}
+
+// ─── Utility ───
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+</script>
+{% endblock %}

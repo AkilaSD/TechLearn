@@ -1,0 +1,139 @@
+{% extends 'core/base.html' %}
+{% block title %}Admin Panel - TechLearn Hub{% endblock %}
+{% block extra_css %}
+<style>
+    .page { padding: 2.5rem 0; }
+    .admin-header {
+        background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.08));
+        border: 1px solid rgba(245,158,11,0.25);
+        border-radius: 20px;
+        padding: 2rem 2.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .admin-header .a-icon { font-size: 3rem; }
+    .admin-header h1 { font-size: 2rem; font-weight: 800; font-family: 'Space Grotesk', sans-serif; }
+    .admin-header p { color: var(--text-muted); }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.2rem;
+        margin-bottom: 2.5rem;
+    }
+    .stat-card { padding: 1.5rem; border-radius: 16px; text-align: center; }
+    .s-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .s-val { font-size: 2.2rem; font-weight: 800; font-family: 'Space Grotesk', sans-serif; }
+    .s-label { color: var(--text-muted); font-size: 0.8rem; margin-top: 0.2rem; }
+    .section-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 1.2rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.9rem 1rem; text-align: left; border-bottom: 1px solid var(--card-border); font-size: 0.9rem; }
+    th { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .badge-admin { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+    .badge-user { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.2); color: #10b981; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+    .lang-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    .lang-stat-card { padding: 1.2rem; border-radius: 14px; }
+    .ls-name { font-weight: 700; margin-bottom: 0.5rem; }
+    .ls-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.2rem; }
+    .ls-row span:last-child { color: var(--text); font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container page">
+    <div class="admin-header">
+        <span class="a-icon">⚙️</span>
+        <div>
+            <h1>Admin Panel</h1>
+            <p>Manage users, quiz questions, and platform analytics.</p>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="card stat-card">
+            <div class="s-icon">👥</div>
+            <div class="s-val gradient-text">{{ users.count }}</div>
+            <div class="s-label">Total Users</div>
+        </div>
+        <div class="card stat-card">
+            <div class="s-icon">🧠</div>
+            <div class="s-val" style="color:#a855f7">{{ total_questions }}</div>
+            <div class="s-label">Quiz Questions</div>
+        </div>
+        <div class="card stat-card">
+            <div class="s-icon">📊</div>
+            <div class="s-val" style="color:#06b6d4">{{ total_attempts }}</div>
+            <div class="s-label">Total Attempts</div>
+        </div>
+        <div class="card stat-card">
+            <div class="s-icon">📚</div>
+            <div class="s-val" style="color:#10b981">10</div>
+            <div class="s-label">Languages</div>
+        </div>
+    </div>
+
+    <div class="card" style="padding:1.5rem;margin-bottom:2rem;">
+        <div class="section-title">👥 Registered Users</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Joined</th>
+                    <th>Staff</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td><strong>{{ u.username }}</strong>{% if u == request.user %} <span style="font-size:0.7rem;color:var(--primary-light)">(you)</span>{% endif %}</td>
+                    <td style="color:var(--text-muted)">{{ u.email|default:"—" }}</td>
+                    <td>
+                        {% if u.profile.user_type == 'admin' or u.is_superuser %}
+                            <span class="badge-admin">⚙️ Admin</span>
+                        {% else %}
+                            <span class="badge-user">👤 User</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:var(--text-muted)">{{ u.date_joined|date:"M d, Y" }}</td>
+                    <td>{% if u.is_staff %}✅{% else %}—{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No users yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card" style="padding:1.5rem;margin-bottom:2rem;">
+        <div class="section-title">📊 Quiz Stats by Language</div>
+        <div class="lang-stats-grid">
+            {% for key, stats in languages_stats.items %}
+            <div class="card lang-stat-card">
+                <div class="ls-name">{{ stats.name }}</div>
+                <div class="ls-row"><span>Questions</span><span>{{ stats.questions }}</span></div>
+                <div class="ls-row"><span>Attempts</span><span>{{ stats.attempts }}</span></div>
+                <div style="margin-top:0.7rem;display:flex;gap:0.5rem;">
+                    <a href="/tutorials/{{ key }}/" class="btn btn-secondary" style="flex:1;justify-content:center;padding:0.35rem;font-size:0.75rem;">📚</a>
+                    <a href="/quiz/{{ key }}/" class="btn btn-secondary" style="flex:1;justify-content:center;padding:0.35rem;font-size:0.75rem;">🧠</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card" style="padding:1.5rem;">
+        <div class="section-title">🔗 Quick Links</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+            <a href="/admin/" class="btn btn-secondary">⚙️ Django Admin</a>
+            <a href="{% url 'tutorial_list' %}" class="btn btn-secondary">📚 All Tutorials</a>
+            <a href="{% url 'quiz_list' %}" class="btn btn-secondary">🧠 All Quizzes</a>
+            <a href="{% url 'recommendations' %}" class="btn btn-secondary">🎯 Recommendations</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-primary">🏠 Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

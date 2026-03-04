@@ -1,0 +1,68 @@
+{% extends 'core/base.html' %}
+{% block title %}Tutorials - TechLearn Hub{% endblock %}
+{% block extra_css %}
+<style>
+    .page { padding: 2.5rem 0; }
+    .page-header { margin-bottom: 2.5rem; }
+    .page-header h1 { font-size: 2.5rem; font-weight: 800; font-family: 'Space Grotesk', sans-serif; }
+    .page-header p { color: var(--text-muted); margin-top: 0.5rem; font-size: 1.1rem; }
+    .lang-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1.5rem;
+    }
+    .lang-card {
+        padding: 2rem;
+        border-radius: 20px;
+        transition: all 0.3s;
+        text-decoration: none;
+        color: var(--text);
+        display: block;
+        position: relative;
+        overflow: hidden;
+    }
+    .lang-card::after {
+        content: '→';
+        position: absolute;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        font-size: 1.2rem;
+        opacity: 0;
+        transition: all 0.3s;
+        transform: translateX(-10px);
+    }
+    .lang-card:hover { transform: translateY(-8px); }
+    .lang-card:hover::after { opacity: 1; transform: translateX(0); }
+    .l-icon { font-size: 3rem; display: block; margin-bottom: 1rem; }
+    .l-name { font-weight: 700; font-size: 1.3rem; margin-bottom: 0.5rem; }
+    .l-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
+    .l-tag {
+        display: inline-block;
+        margin-top: 1rem;
+        padding: 0.25rem 0.7rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container page">
+    <div class="page-header">
+        <a href="{% url 'dashboard' %}" style="color:var(--text-muted);text-decoration:none;font-size:0.9rem;">← Dashboard</a>
+        <h1>📚 Tutorials</h1>
+        <p>Choose a language to explore curated resources from the best sites on the web.</p>
+    </div>
+    <div class="lang-grid">
+        {% for lang in languages %}
+        <a href="{% url 'tutorial_detail' lang.key %}" class="card lang-card" style="border-color: {{ lang.color }}44;">
+            <span class="l-icon">{{ lang.icon }}</span>
+            <div class="l-name">{{ lang.name }}</div>
+            <div class="l-desc">{{ lang.desc }}</div>
+            <span class="l-tag" style="background: {{ lang.color }}22; color: {{ lang.color }}; border: 1px solid {{ lang.color }}44;">Tutorial</span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends 'core/base.html' %}
+{% block title %}{{ data.name }} Tutorial - TechLearn Hub{% endblock %}
+{% block extra_css %}
+<style>
+    .page { padding: 2.5rem 0; }
+    .tutorial-hero {
+        background: {{ data.bg_gradient }};
+        border-radius: 24px;
+        padding: 3rem;
+        margin-bottom: 2.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .tutorial-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 50%;
+    }
+    .tutorial-hero .hero-icon { font-size: 5rem; display: block; margin-bottom: 1rem; }
+    .tutorial-hero h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        font-family: 'Space Grotesk', sans-serif;
+        color: white;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    .tutorial-hero p { color: rgba(255,255,255,0.85); margin-top: 0.7rem; font-size: 1.05rem; max-width: 600px; line-height: 1.6; }
+    .tutorial-hero .quiz-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+        padding: 0.7rem 1.5rem;
+        background: rgba(255,255,255,0.2);
+        border: 2px solid rgba(255,255,255,0.4);
+        border-radius: 12px;
+        color: white;
+        text-decoration: none;
+        font-weight: 700;
+        transition: all 0.2s;
+        backdrop-filter: blur(10px);
+    }
+    .tutorial-hero .quiz-link:hover { background: rgba(255,255,255,0.35); }
+    .content-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+    }
+    @media (max-width: 768px) { .content-grid { grid-template-columns: 1fr; } }
+    .section-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem; }
+    .resource-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.2rem;
+        border-radius: 14px;
+        margin-bottom: 0.8rem;
+        text-decoration: none;
+        color: var(--text);
+        transition: all 0.2s;
+        border: 1px solid var(--card-border);
+        background: var(--card-bg);
+    }
+    .resource-card:hover { transform: translateX(6px); border-color: var(--primary); background: rgba(124,58,237,0.08); }
+    .res-icon { font-size: 1.8rem; flex-shrink: 0; }
+    .res-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.25rem; }
+    .res-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+    .res-arrow { margin-left: auto; color: var(--text-muted); align-self: center; flex-shrink: 0; }
+    .topics-list { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+    .topic-tag {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid var(--card-border);
+        transition: all 0.2s;
+    }
+    .topic-tag:hover { background: rgba(124,58,237,0.15); border-color: var(--primary); }
+    .sidebar-card { padding: 1.5rem; border-radius: 16px; margin-bottom: 1.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container page">
+    <a href="{% url 'tutorial_list' %}" style="color:var(--text-muted);text-decoration:none;font-size:0.9rem;display:inline-block;margin-bottom:1rem;">← All Tutorials</a>
+    
+    <div class="tutorial-hero">
+        <span class="hero-icon">{{ data.icon }}</span>
+        <h1>{{ data.name }} Tutorial</h1>
+        <p>{{ data.description }}</p>
+        <a href="{% url 'quiz_detail' language %}" class="quiz-link">🧠 Take {{ data.name }} Quiz →</a>
+    </div>
+
+    <div class="content-grid">
+        <div>
+            <div class="section-title">🔗 Learning Resources</div>
+            {% for res in data.resources %}
+            <a href="{{ res.url }}" target="_blank" rel="noopener" class="resource-card">
+                <span class="res-icon">{{ res.icon }}</span>
+                <div style="flex:1">
+                    <div class="res-title">{{ res.title }}</div>
+                    <div class="res-desc">{{ res.desc }}</div>
+                </div>
+                <span class="res-arrow">↗</span>
+            </a>
+            {% endfor %}
+        </div>
+
+        <div>
+            <div class="card sidebar-card">
+                <div class="section-title">📋 Topics Covered</div>
+                <div class="topics-list">
+                    {% for topic in data.topics %}
+                    <span class="topic-tag">{{ topic }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card sidebar-card" style="background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(6,182,212,0.05)); border-color: rgba(124,58,237,0.2);">
+                <div class="section-title">🧠 Test Yourself</div>
+                <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">Ready to test your {{ data.name }} knowledge? Take the interactive quiz!</p>
+                <a href="{% url 'quiz_detail' language %}" class="btn btn-primary" style="width:100%;justify-content:center;">Start Quiz →</a>
+            </div>
+
+            <div class="card sidebar-card">
+                <div class="section-title">🎯 Want a Roadmap?</div>
+                <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">Get AI-powered course recommendations based on your career goals.</p>
+                <a href="{% url 'recommendations' %}" class="btn btn-secondary" style="width:100%;justify-content:center;">Get Recommendations →</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
